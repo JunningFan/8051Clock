@@ -1,0 +1,5 @@
+"STARTUP.obj",
+"DS1302.obj",
+"main.obj" 
+TO "proj0" 
+RAMSIZE(256) 

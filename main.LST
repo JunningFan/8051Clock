@@ -1,0 +1,145 @@
+C51 COMPILER V9.01   MAIN                                                                  01/06/2018 02:12:10 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "DS1302.h"
+   2          sbit wela = P2^7 ;
+   3          sbit dula = P2^6 ;
+   4          sbit s1 = P3^4; //independent buttons
+   5          sbit s2 = P3^5;
+   6          sbit s3 = P3^6;
+   7          sbit s4 = P3^7; //
+   8          uchar code charLib[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66,0x6D, 0x7D, 
+   9          0x07, 0x7F, 0x6F, 0x80, 0x40};
+  10          void delay(uint z);
+  11          void baudRateGenerator(void);
+  12          void display(uchar* input, uchar dotMode);
+  13          uchar getButton(void);
+  14          int main(void){ 
+  15   1              Time time;
+  16   1              uchar ASCIIStr[2];
+  17   1              uchar toDisplay[6];
+  18   1              uchar displayMode = 0;
+  19   1              //EA = 1;
+  20   1              //ES = 1; //interrupt enabled(Serial)
+  21   1              //init buttons
+  22   1              s1 = 1; 
+  23   1              s2 = 1;
+  24   1              s3 = 1;
+  25   1              s4 = 1; 
+  26   1              baudRateGenerator();
+  27   1              SBUF = 0x0F;
+  28   1              initDS1302();
+  29   1              SBUF = 0x0F;
+  30   1              TI = 0; 
+  31   1              while(1){
+  32   2                      readTime_1302(&time);
+  33   2                      //displayStr(BINtoASCII(time.second, ASCIIStr), 2);
+  34   2                      if(getButton() == 1)
+  35   2                              displayMode = !displayMode;
+  36   2                      if(displayMode){
+  37   3                              BINtoASCII(time.second, ASCIIStr);      
+  38   3                              toDisplay[5] = ASCIIStr[0] - 48;
+  39   3                              toDisplay[4] = ASCIIStr[1] - 48;
+  40   3                              BINtoASCII(time.minute, ASCIIStr);
+  41   3                              toDisplay[3] = ASCIIStr[0] - 48;
+  42   3                              toDisplay[2] = ASCIIStr[1] - 48;
+  43   3                              BINtoASCII(time.hour, ASCIIStr);
+  44   3                              toDisplay[1] = ASCIIStr[0] - 48;
+  45   3                              toDisplay[0] = ASCIIStr[1] - 48;
+  46   3                              display(toDisplay, 1);
+  47   3                      } else {
+  48   3                              BINtoASCII(time.date, ASCIIStr);        
+  49   3                              toDisplay[5] = ASCIIStr[0] - 48;
+  50   3                              toDisplay[4] = ASCIIStr[1] - 48;
+  51   3                              BINtoASCII(time.month, ASCIIStr);
+  52   3                              toDisplay[3] = ASCIIStr[0] - 48;
+  53   3                              toDisplay[2] = ASCIIStr[1] - 48;
+  54   3                              BINtoASCII(time.year, ASCIIStr);
+  55   3                              toDisplay[1] = ASCIIStr[0] - 48;
+C51 COMPILER V9.01   MAIN                                                                  01/06/2018 02:12:10 PAGE 2   
+
+  56   3                              toDisplay[0] = ASCIIStr[1] - 48;
+  57   3                              display(toDisplay, 1);
+  58   3                      }
+  59   2              }
+  60   1              return 0;
+  61   1      }
+  62          //config BaudRateGenerator
+  63          void baudRateGenerator(void){
+  64   1              //baudRate: 2400
+  65   1              TMOD = 0x20; //timer0: 8_bit auto reload
+  66   1              TL1 = 0xF3;     //
+  67   1              TH1 = 0xF3;
+  68   1              TR1 = 1; //enable T0
+  69   1              // set serial output to mode 1
+  70   1              SM0 = 0;
+  71   1              SM1 = 1;        // 9-bit var baudRate
+  72   1              REN = 1;        // enable serial reciever
+  73   1      }
+  74          void delay(uint z){
+  75   1              uint x,y;
+  76   1              for(x=z;x>0;x--)
+  77   1                      for(y=1320;y>0;y--);    
+  78   1      }
+  79          void display(uchar* input, uchar dotMode){
+  80   1              uchar i = 0;    
+  81   1              for(; i < 6; i++){
+  82   2                      wela = 1;
+  83   2                      P0 = 1 << i; //specify which LED to control
+  84   2                      P0 = ~P0;
+  85   2                      //j = 0;
+  86   2                      wela = 0;
+  87   2                      dula = 1;
+  88   2                      P0 = charLib[input[i]]; //decode ref from the wordStock
+  89   2                      if(dotMode == 1 && ((i == 1) || (i == 3 ))){
+  90   3                              delay(1);
+  91   3                              P0 =  charLib[10];
+  92   3                      } else if(dotMode == 2 && i == 2){
+  93   3                              delay(1);
+  94   3                              P0 =  charLib[10];
+  95   3                      }
+  96   2                      dula = 0;
+  97   2                      delay(1);
+  98   2              }
+  99   1      }
+ 100          
+ 101          uchar getButton(void){           //detect which button is pressed; no button = 0; otherwise return 1~4
+ 102   1              uchar button = 0;
+ 103   1              if((!s1) || (!s2) || (!s3) || (!s4)){
+ 104   2                      delay(10);
+ 105   2              }
+ 106   1              if(s1 == 0){
+ 107   2                      button = 1;
+ 108   2              } else if(s2 == 0){
+ 109   2                      button = 2;
+ 110   2              } else if(s3 ==0) {
+ 111   2                      button = 3;
+ 112   2              }  else if(s4 == 0){
+ 113   2                      button = 4;
+ 114   2              }
+ 115   1              if(button)
+ 116   1                      delay(200);
+ 117   1              return button;
+C51 COMPILER V9.01   MAIN                                                                  01/06/2018 02:12:10 PAGE 3   
+
+ 118   1      } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    414    ----
+   CONSTANT SIZE    =     12    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      23
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
